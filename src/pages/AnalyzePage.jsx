@@ -104,6 +104,10 @@ export default function AnalyzePage() {
         businessName: businessName.trim() || null
       })
 
+      if (!report || Object.keys(report).length < 3 || (!report.businessName && !report.businessType)) {
+        throw new Error('AI returned empty or invalid data. Please try again or provide more specific details.')
+      }
+
       clearInterval(msgTimer)
 
       // Navigate to preview mode without auto-saving
