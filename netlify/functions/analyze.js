@@ -21,9 +21,9 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: 'Method not allowed' }
   }
 
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY
   if (!GEMINI_API_KEY) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'GEMINI_API_KEY not configured' }) }
+    return { statusCode: 500, body: JSON.stringify({ error: 'GEMINI_API_KEY not configured in Netlify' }) }
   }
 
   try {
