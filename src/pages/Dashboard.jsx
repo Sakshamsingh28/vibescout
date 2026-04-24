@@ -172,7 +172,7 @@ export default function Dashboard() {
             {imgPreview && (
               <button 
                 onClick={(e) => { e.stopPropagation(); setImgPreview(null); setImgFile(null); }}
-                style={{ position:'absolute', -top:8, -right:8, background:'#ef4444', color:'#fff', border:'none', borderRadius:'50%', width:20, height:20, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:10 }}>
+                style={{ position:'absolute', top:-8, right:-8, background:'#ef4444', color:'#fff', border:'none', borderRadius:'50%', width:20, height:20, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:10 }}>
                 <X size={12} />
               </button>
             )}
