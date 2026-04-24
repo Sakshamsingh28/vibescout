@@ -98,30 +98,68 @@ exports.handler = async (event) => {
       openrouter: process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY
     }
 
-    console.log('Key Presence Check:', {
-      gemini: !!keys.gemini,
-      groq: !!keys.groq,
-      openrouter: !!keys.openrouter
-    })
-
     const errors = []
 
-    // 1. Try Gemini
+    // 1. Try Gemini (v1 API)
     if (keys.gemini) {
-      const report = await callGemini(body, keys.gemini)
-      if (report && !report.error) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report) }
-      errors.push(`Gemini failed: ${report?.error || 'Unknown error'}`)
-    } else {
-      errors.push('Gemini key missing')
+      try {
+        const genAI = new GoogleGenerativeAI(keys.gemini)
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+        
+        const parts = []
+        if (body.screenshotBase64) {
+          parts.push({ inlineData: { mimeType: 'image/jpeg', data: body.screenshotBase64 } })
+        }
+        parts.push({ text: `Analyze this business: ${body.businessName || body.url}. Return VibeScout JSON report.` })
+        
+        const result = await model.generateContent(parts)
+        const report = extractJSON(result.response.text())
+        if (report) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report) }
+      } catch (e) {
+        errors.push(`Gemini failed: ${e.message}`)
+      }
     }
 
-    // 2. Try Groq Fallback (Now supports Vision)
-    if (keys.groq) {
-      const report = await callGroq(body, keys.groq)
-      if (report && !report.error) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report) }
-      errors.push(`Groq failed: ${report?.error || 'Unknown error'}`)
-    } else {
-      errors.push('Groq key missing')
+    // 2. Try Groq (Stable Text Model)
+    if (keys.groq && !body.screenshotBase64) {
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${keys.groq}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: `Research and analyze: ${body.businessName || body.url}. Return JSON.` }
+            ],
+            response_format: { type: "json_object" }
+          })
+        })
+        const data = await response.json()
+        const report = extractJSON(data.choices[0].message.content)
+        if (report) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report) }
+      } catch (e) {
+        errors.push(`Groq failed: ${e.message}`)
+      }
+    }
+
+    // 3. Try OpenRouter (Final Fallback)
+    if (keys.openrouter) {
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${keys.openrouter}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: "google/gemini-flash-1.5",
+            messages: [{ role: "user", content: `Research business: ${body.businessName || body.url}. Return JSON.` }]
+          })
+        })
+        const data = await response.json()
+        const report = extractJSON(data.choices[0].message.content)
+        if (report) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report) }
+      } catch (e) {
+        errors.push(`OpenRouter failed: ${e.message}`)
+      }
     }
 
     return {
@@ -129,11 +167,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ 
         error: 'All AI providers failed.',
         details: errors,
-        debug: {
-          hasGemini: !!keys.gemini,
-          hasGroq: !!keys.groq,
-          isScreenshot: !!body.screenshotBase64
-        }
+        debug: { hasGemini: !!keys.gemini, hasGroq: !!keys.groq, hasOpenRouter: !!keys.openrouter }
       })
     }
   } catch (err) {
