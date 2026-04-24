@@ -45,31 +45,42 @@ const callGemini = async (body, apiKey) => {
     return extractJSON(result.response.text())
   } catch (e) {
     console.error('Gemini error:', e.message)
-    return null
+    return { error: e.message } // Return error object to handle in main loop
   }
 }
 
-// Provider 2: Groq
+// Provider 2: Groq (Now with Vision Fallback)
 const callGroq = async (body, apiKey) => {
-  if (body.action === 'generateCopy' || body.screenshotBase64) return null
   try {
+    const isVision = !!body.screenshotBase64
+    const model = isVision ? "llama-3.2-11b-vision-preview" : "llama-3.3-70b-versatile"
+    
+    const messages = [
+      { role: "system", content: SYSTEM_PROMPT },
+      { 
+        role: "user", 
+        content: isVision ? [
+          { type: "text", text: `Analyze this business: ${body.businessName || body.url}. Return JSON.` },
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${body.screenshotBase64}` } }
+        ] : `Research and analyze: ${body.businessName || body.url}. Return JSON.`
+      }
+    ]
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `Research and analyze: ${body.businessName || body.url}. Return JSON.` }
-        ],
+        model: model,
+        messages: messages,
         response_format: { type: "json_object" }
       })
     })
     const data = await response.json()
+    if (data.error) throw new Error(data.error.message)
     return extractJSON(data.choices[0].message.content)
   } catch (e) {
     console.error('Groq error:', e.message)
-    return null
+    return { error: e.message }
   }
 }
 
@@ -96,17 +107,17 @@ exports.handler = async (event) => {
     // 1. Try Gemini
     if (keys.gemini) {
       const report = await callGemini(body, keys.gemini)
-      if (report) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report) }
-      errors.push('Gemini failed (check logs)')
+      if (report && !report.error) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report) }
+      errors.push(`Gemini failed: ${report?.error || 'Unknown error'}`)
     } else {
       errors.push('Gemini key missing')
     }
 
-    // 2. Try Groq Fallback
+    // 2. Try Groq Fallback (Now supports Vision)
     if (keys.groq) {
       const report = await callGroq(body, keys.groq)
-      if (report) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report) }
-      errors.push('Groq failed (likely no vision support for screenshots)')
+      if (report && !report.error) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report) }
+      errors.push(`Groq failed: ${report?.error || 'Unknown error'}`)
     } else {
       errors.push('Groq key missing')
     }
