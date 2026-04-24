@@ -42,34 +42,34 @@ Output ONLY valid JSON (no markdown, no preamble) with this structure:
     "adjectives": ["adj1","adj2","adj3","adj4","adj5"],
     "targetAudience": "string",
     "pricePoint": "budget|mid-range|premium|luxury",
-    "ambiance": "2-3 sentence description of the physical and digital ambiance"
+    "ambiance": "3-5 punchy bullet points describing the physical and digital ambiance"
   },
   "digitalPresence": {
     "googleMaps": {
       "hasProfile": true,
-      "reviewHighlights": ["highlight1","highlight2","highlight3"],
+      "reviewHighlights": ["bullet point 1","bullet point 2","bullet point 3"],
       "commonKeywords": ["kw1","kw2","kw3"]
     },
     "instagram": {
       "likelyActive": true,
-      "estimatedStyle": "description of their likely Instagram aesthetic",
+      "estimatedStyle": "2-3 bullet points describing their aesthetic",
       "contentThemes": ["theme1","theme2","theme3"]
     },
     "facebook": {
       "likelyActive": true,
-      "contentStyle": "description of their Facebook presence style"
+      "contentStyle": "1-2 bullet points on their presence"
     }
   },
   "websiteRecommendations": {
-    "layout": "description of ideal layout approach",
+    "layout": "2-3 bullet points on ideal layout approach",
     "mustHaveFeatures": ["feature1","feature2","feature3","feature4"],
     "avoidFeatures": ["avoid1","avoid2"],
-    "heroSection": "description of ideal hero section",
+    "heroSection": "2-3 bullet points on ideal hero section",
     "keyPages": ["Home","About","Menu/Services","Contact","Gallery"],
     "callToAction": "primary CTA text"
   },
   "inspirationKeywords": ["kw1","kw2","kw3","kw4","kw5"],
-  "summary": "3-4 sentence executive summary for the web designer explaining the vibe and design direction"
+  "summary": "4-6 punchy bullet points providing an executive summary for the web designer"
 }`
 
 // Helper: robust JSON extraction

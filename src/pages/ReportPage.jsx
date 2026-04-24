@@ -9,13 +9,40 @@ import { motion, AnimatePresence } from 'framer-motion'
 const SECTION = ({ title, children, style={} }) => (
   <motion.div 
     initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
-    style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:16, padding:32, boxShadow: '0 8px 32px rgba(0,0,0,0.2)', ...style }}>
-    <h3 style={{ fontFamily:'var(--font-head)', fontWeight:700, fontSize:18, letterSpacing:'-0.01em', marginBottom:24, color:'var(--text)', display: 'flex', alignItems: 'center', gap: 10 }}>
+    className="glass"
+    style={{ borderRadius:24, padding:32, boxShadow: '0 16px 48px rgba(0,0,0,0.3)', ...style }}>
+    <h3 style={{ fontFamily:'var(--font-head)', fontWeight:800, fontSize:20, letterSpacing:'-0.01em', marginBottom:24, color:'var(--text)', display: 'flex', alignItems: 'center', gap: 10 }}>
       {title}
     </h3>
     {children}
   </motion.div>
 )
+
+const renderBullets = (content) => {
+  if (!content) return null
+  if (Array.isArray(content)) {
+    return (
+      <ul style={{ paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {content.map((item, i) => (
+          <li key={i} style={{ color: 'var(--text2)', fontSize: 15, lineHeight: 1.6 }}>{item}</li>
+        ))}
+      </ul>
+    )
+  }
+  if (typeof content === 'string') {
+    const points = content.split('\n').filter(p => p.trim()).map(p => p.replace(/^[•\-\*]\s*/, '').trim())
+    if (points.length > 1) {
+      return (
+        <ul style={{ paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {points.map((p, i) => (
+            <li key={i} style={{ color: 'var(--text2)', fontSize: 15, lineHeight: 1.6 }}>{p}</li>
+          ))}
+        </ul>
+      )
+    }
+  }
+  return <div style={{ color: 'var(--text2)', fontSize: 15, lineHeight: 1.6 }}>{content}</div>
+}
 
 export default function ReportPage() {
   const { id } = useParams()
@@ -117,20 +144,20 @@ export default function ReportPage() {
           fontSize:14, fontWeight: 600, cursor:'pointer', marginBottom:32, transition:'color 0.2s'
         }}
       >
-        <ArrowLeft size={16}/> Overview
+        <ArrowLeft size={16}/> Back to Intelligence
       </motion.button>
 
       {/* Save Button (Preview Mode) */}
       {id === 'preview' && (
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 32, padding: 24, background: 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 32, padding: 24, background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <div>
-            <h3 style={{ color: 'var(--green)', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Uncommitted Preview</h3>
+            <h3 style={{ color: 'var(--accent)', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Uncommitted Preview</h3>
             <p style={{ color: 'var(--text2)', fontSize: 14 }}>This intelligence report has not been permanently stored in your database.</p>
           </div>
           <motion.button 
             whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             onClick={handleSaveToDatabase} disabled={saving}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: 'var(--accent)', color: '#020617', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 14, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
             <Save size={18} />
             {saving ? 'Committing...' : 'Commit to Database'}
           </motion.button>
@@ -140,15 +167,15 @@ export default function ReportPage() {
       {/* Hero */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+        className="glass"
         style={{
-          background: 'var(--bg2)', border:'1px solid var(--border)',
-          borderRadius:20, padding:'40px 48px', marginBottom:32,
-          position:'relative', overflow:'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.3)'
+          borderRadius:24, padding:'48px', marginBottom:32,
+          position:'relative', overflow:'hidden', boxShadow: '0 32px 64px rgba(0,0,0,0.4)'
         }}>
         {/* Subtle glow accent */}
         <div style={{
           position:'absolute', top: -100, right: -100, width:400, height:400,
-          background:'radial-gradient(circle,rgba(34,197,94,0.05) 0%,transparent 70%)',
+          background:'radial-gradient(circle,rgba(124,58,237,0.08) 0%,transparent 70%)',
           pointerEvents:'none'
         }}/>
 
@@ -157,8 +184,8 @@ export default function ReportPage() {
             <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
               {report.businessType && (
                 <span style={{
-                  padding:'6px 14px', borderRadius:24, fontSize:12, fontWeight:600,
-                  background:'var(--bg3)', color:'var(--text)',
+                  padding:'6px 14px', borderRadius:24, fontSize:12, fontWeight:700,
+                  background:'rgba(255,255,255,0.03)', color:'var(--text)',
                   border:'1px solid var(--border)', textTransform:'capitalize'
                 }}>
                   {report.businessType}
@@ -166,32 +193,32 @@ export default function ReportPage() {
               )}
               {report.primaryVibe && (
                 <span style={{
-                  padding:'6px 14px', borderRadius:24, fontSize:12, fontWeight:600,
-                  background:'rgba(34,197,94,0.1)', color:'var(--green)',
-                  border:'1px solid rgba(34,197,94,0.2)'
+                  padding:'6px 14px', borderRadius:24, fontSize:12, fontWeight:700,
+                  background:'rgba(124,58,237,0.1)', color:'var(--accent)',
+                  border:'1px solid rgba(124,58,237,0.2)'
                 }}>
                   {report.primaryVibe}
                 </span>
               )}
             </div>
-            <h1 style={{ fontFamily:'var(--font-head)', fontWeight:800, fontSize:40, letterSpacing:'-0.03em', marginBottom:12, color: 'var(--text)' }}>
+            <h1 style={{ fontFamily:'var(--font-head)', fontWeight:800, fontSize:48, letterSpacing:'-0.04em', marginBottom:12, color: 'var(--text)', lineHeight: 1 }}>
               {report.businessName}
             </h1>
-            <div style={{ display:'flex', alignItems:'center', gap:20, flexWrap:'wrap' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:20, flexWrap:'wrap', marginTop: 16 }}>
               {report.location && (
-                <span style={{ display:'flex', alignItems:'center', gap:6, fontSize:14, color:'var(--text2)', fontWeight: 500 }}>
-                  <MapPin size={14}/>{report.location}
+                <span style={{ display:'flex', alignItems:'center', gap:6, fontSize:15, color:'var(--text2)', fontWeight: 500 }}>
+                  <MapPin size={16}/>{report.location}
                 </span>
               )}
               {report.phone && (
-                <span style={{ display:'flex', alignItems:'center', gap:6, fontSize:14, color:'var(--text)', fontWeight: 500 }}>
-                  <Phone size={14}/>{report.phone}
+                <span style={{ display:'flex', alignItems:'center', gap:6, fontSize:15, color:'var(--text)', fontWeight: 500 }}>
+                  <Phone size={16}/>{report.phone}
                 </span>
               )}
               {report.website && (
                 <motion.a whileHover={{ color: 'var(--accent)' }} href={report.website} target="_blank" rel="noreferrer"
-                  style={{ display:'flex', alignItems:'center', gap:6, fontSize:14, color:'var(--blue)', fontWeight: 500, transition: 'color 0.2s', textDecoration: 'none' }}>
-                  <Globe size={14}/>{report.website} <ExternalLink size={12}/>
+                  style={{ display:'flex', alignItems:'center', gap:6, fontSize:15, color:'var(--blue)', fontWeight: 600, transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <Globe size={16}/>{report.website} <ExternalLink size={14}/>
                 </motion.a>
               )}
             </div>
@@ -200,40 +227,41 @@ export default function ReportPage() {
           {/* Vibe Score */}
           <div className="report-score-section" style={{ textAlign:'center', flexShrink:0 }}>
             <div style={{
-              width:88, height:88, borderRadius:'50%',
+              width:100, height:100, borderRadius:'50%',
               background:'conic-gradient(var(--accent) 0% calc(var(--s)*1%), var(--bg3) 0%)',
               '--s': `${(report.vibeScore||5)*10}`,
               display:'flex', alignItems:'center', justifyContent:'center', position:'relative',
-              boxShadow: '0 0 24px rgba(34,197,94,0.1)'
+              boxShadow: '0 0 32px rgba(124,58,237,0.15)'
             }}>
               <div style={{
-                width:72, height:72, borderRadius:'50%', background:'var(--bg)',
+                width:84, height:84, borderRadius:'50%', background:'var(--bg)',
                 display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'
               }}>
-                <div style={{ fontFamily:'var(--font-head)', fontWeight:800, fontSize:24, lineHeight:1, color:'var(--text)' }}>
+                <div style={{ fontFamily:'var(--font-head)', fontWeight:800, fontSize:28, lineHeight:1, color:'var(--text)' }}>
                   {report.vibeScore}
                 </div>
-                <div style={{ fontSize:10, color:'var(--text3)', letterSpacing:'0.1em', marginTop: 2, fontWeight: 600 }}>SCORE</div>
+                <div style={{ fontSize:10, color:'var(--text3)', letterSpacing:'0.1em', marginTop: 2, fontWeight: 700 }}>VIBE</div>
               </div>
             </div>
             {report.googleRating && (
-              <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:12, justifyContent:'center', fontSize:14 }}>
-                <Star size={14} color="var(--amber)" fill="var(--amber)"/>
-                <span style={{ color:'var(--text)', fontWeight:700 }}>{report.googleRating}</span>
-                <span style={{ color:'var(--text3)', fontSize:12, fontWeight: 500 }}>({report.totalReviews?.toLocaleString()})</span>
+              <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:16, justifyContent:'center', fontSize:15 }}>
+                <Star size={16} color="var(--amber)" fill="var(--amber)"/>
+                <span style={{ color:'var(--text)', fontWeight:800 }}>{report.googleRating}</span>
+                <span style={{ color:'var(--text3)', fontSize:13, fontWeight: 500 }}>({report.totalReviews?.toLocaleString()})</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Summary */}
+        {/* Summary (Bulleted) */}
         {report.summary && (
           <div style={{
-            marginTop:32, padding:'24px', borderRadius:16,
-            background:'var(--bg3)', border:'1px solid var(--border)',
-            fontSize:15, color:'var(--text2)', lineHeight:1.8, position: 'relative', zIndex: 1
+            marginTop:40, padding:'32px', borderRadius:20,
+            background:'rgba(255,255,255,0.02)', border:'1px solid var(--border)',
+            position: 'relative', zIndex: 1
           }}>
-            {report.summary}
+            <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 800, letterSpacing: '0.1em', marginBottom: 16, textTransform: 'uppercase' }}>Executive Summary</div>
+            {renderBullets(report.summary)}
           </div>
         )}
       </motion.div>
