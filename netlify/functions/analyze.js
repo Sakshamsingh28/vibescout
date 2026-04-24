@@ -86,6 +86,12 @@ exports.handler = async (event) => {
       openrouter: process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY
     }
 
+    console.log('Key Presence Check:', {
+      gemini: !!keys.gemini,
+      groq: !!keys.groq,
+      openrouter: !!keys.openrouter
+    })
+
     // 1. Try Gemini
     if (keys.gemini) {
       const report = await callGemini(body, keys.gemini)
