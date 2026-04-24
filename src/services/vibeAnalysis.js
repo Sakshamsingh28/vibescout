@@ -96,7 +96,7 @@ const callGemini = async (input) => {
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash', // Corrected from 2.5
+      model: 'gemini-2.5-flash',
       systemInstruction: SYSTEM_PROMPT,
       tools: [{ googleSearch: {} }]
     })
@@ -150,6 +150,7 @@ const callGroq = async (input) => {
     })
 
     const data = await response.json()
+    if (!data.choices || !data.choices[0]) throw new Error(data.error?.message || 'No response from Groq')
     return extractJSON(data.choices[0].message.content)
   } catch (e) {
     console.warn('Groq Provider Failed:', e.message)
@@ -180,6 +181,7 @@ const callOpenRouter = async (input) => {
     })
 
     const data = await response.json()
+    if (!data.choices || !data.choices[0]) throw new Error(data.error?.message || 'No response from OpenRouter')
     return extractJSON(data.choices[0].message.content)
   } catch (e) {
     console.warn('OpenRouter Provider Failed:', e.message)
@@ -193,23 +195,40 @@ export const analyzeBusinessVibe = async (input) => {
     return analyzeViaNetlify(input)
   }
 
+  const errors = []
+
   // 1. Try Gemini
-  let report = await callGemini(input)
-  if (report) return report
+  try {
+    const report = await callGemini(input)
+    if (report) return report
+    errors.push('Gemini returned no data')
+  } catch (e) {
+    errors.push(`Gemini failed: ${e.message}`)
+  }
 
   console.info('Gemini failed or skipped, trying Groq fallback...')
   
   // 2. Try Groq
-  report = await callGroq(input)
-  if (report) return report
+  try {
+    const report = await callGroq(input)
+    if (report) return report
+    errors.push('Groq returned no data')
+  } catch (e) {
+    errors.push(`Groq failed: ${e.message}`)
+  }
 
   console.info('Groq failed or skipped, trying OpenRouter fallback...')
 
   // 3. Try OpenRouter
-  report = await callOpenRouter(input)
-  if (report) return report
+  try {
+    const report = await callOpenRouter(input)
+    if (report) return report
+    errors.push('OpenRouter returned no data')
+  } catch (e) {
+    errors.push(`OpenRouter failed: ${e.message}`)
+  }
 
-  throw new Error('All AI providers failed or returned invalid data. Check your API keys and connectivity.')
+  throw new Error(`All AI providers failed: ${errors.join(' | ')}`)
 }
 
 export const generateWebsiteCopy = async (vibeReport) => {
