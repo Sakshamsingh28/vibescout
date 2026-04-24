@@ -22,8 +22,9 @@ const extractJSON = (text) => {
 const callGemini = async (body, apiKey) => {
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
+    // Using gemini-1.5-flash-latest to avoid 404 on v1beta
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-1.5-flash-latest',
       systemInstruction: SYSTEM_PROMPT
     })
 
@@ -45,15 +46,16 @@ const callGemini = async (body, apiKey) => {
     return extractJSON(result.response.text())
   } catch (e) {
     console.error('Gemini error:', e.message)
-    return { error: e.message } // Return error object to handle in main loop
+    return { error: e.message }
   }
 }
 
-// Provider 2: Groq (Now with Vision Fallback)
+// Provider 2: Groq (Updated Vision Model)
 const callGroq = async (body, apiKey) => {
   try {
     const isVision = !!body.screenshotBase64
-    const model = isVision ? "llama-3.2-11b-vision-preview" : "llama-3.3-70b-versatile"
+    // llama-3.2-11b-vision-preview is decommissioned, using llama-3.2-90b-vision-preview
+    const model = isVision ? "llama-3.2-90b-vision-preview" : "llama3-70b-8192"
     
     const messages = [
       { role: "system", content: SYSTEM_PROMPT },
