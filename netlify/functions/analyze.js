@@ -24,8 +24,7 @@ const callGemini = async (body, apiKey) => {
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
       model: 'gemini-1.5-flash',
-      systemInstruction: SYSTEM_PROMPT,
-      tools: [{ googleSearch: {} }]
+      systemInstruction: SYSTEM_PROMPT
     })
 
     if (body.action === 'generateCopy') {
@@ -92,21 +91,37 @@ exports.handler = async (event) => {
       openrouter: !!keys.openrouter
     })
 
+    const errors = []
+
     // 1. Try Gemini
     if (keys.gemini) {
       const report = await callGemini(body, keys.gemini)
       if (report) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report) }
+      errors.push('Gemini failed (check logs)')
+    } else {
+      errors.push('Gemini key missing')
     }
 
     // 2. Try Groq Fallback
     if (keys.groq) {
       const report = await callGroq(body, keys.groq)
       if (report) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report) }
+      errors.push('Groq failed (likely no vision support for screenshots)')
+    } else {
+      errors.push('Groq key missing')
     }
 
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'All AI providers failed. Check quotas and API keys.' })
+      body: JSON.stringify({ 
+        error: 'All AI providers failed.',
+        details: errors,
+        debug: {
+          hasGemini: !!keys.gemini,
+          hasGroq: !!keys.groq,
+          isScreenshot: !!body.screenshotBase64
+        }
+      })
     }
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) }
