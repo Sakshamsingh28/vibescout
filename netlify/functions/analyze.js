@@ -1,9 +1,42 @@
 // Netlify serverless function — proxies AI API calls with triple-layer fallback system
 const { GoogleGenerativeAI } = require('@google/generative-ai')
 
-const SYSTEM_PROMPT = `You are VibeScout AI, an expert business vibe analyst.
-Analyze the digital presence and produce a JSON report.
-Use bullet points for lists.`
+const SYSTEM_PROMPT = `You are VibeScout AI, a professional Web Development Lead Generator.
+Your goal is to analyze a business and produce a high-fidelity JSON intelligence report focused on finding website improvement opportunities for cold calling.
+
+FORMATTING RULES (STRICT):
+1. NO PARAGRAPHS. Use multi-level bullet points for all description fields.
+2. Every field starting with a bullet (•) must contain 2-4 key insights.
+3. Find their social media presence if possible.
+4. Output ONLY valid JSON. Escape all newlines as \\n and use double quotes.
+
+JSON SCHEMA:
+{
+  "businessName": "string",
+  "businessType": "cafe|gym|salon|restaurant|retail|other",
+  "location": "string",
+  "googleRating": number,
+  "totalReviews": number,
+  "vibeScore": number (1-10),
+  "primaryVibe": "string",
+  "colorPalette": { "primary": "#hex", "secondary": "#hex", "accent": "#hex", "background": "#hex", "text": "#hex" },
+  "typography": { "headingStyle": "string", "moodWords": ["word1", "word2"] },
+  "vibeSummary": "• Point 1\n• Point 2",
+  "socialHandles": {
+    "instagram": "@handle or Not Found",
+    "facebook": "url or Not Found",
+    "website": "url or Not Found"
+  },
+  "coldCallAmmunition": {
+    "strengths": "• What they do well currently\n• Point 2",
+    "weaknesses": "• Missing website features\n• Poor mobile design\n• Outdated info",
+    "pitchAngle": "• How to pitch a new website to them\n• Value proposition"
+  },
+  "websiteDevelopmentSuggestions": {
+    "designDirection": "• Modern layout ideas\n• Vibe to capture",
+    "featuresToAdd": "• Online booking\n• Menu integration"
+  }
+}`
 
 // Helper for JSON extraction
 const extractJSON = (text) => {
@@ -37,7 +70,7 @@ exports.handler = async (event) => {
         
         const parts = []
         if (body.screenshotBase64) {
-          parts.push({ inlineData: { mimeType: 'image/jpeg', data: body.screenshotBase64 } })
+          parts.push({ inlineData: { mimeType: body.mimeType || 'image/png', data: body.screenshotBase64 } })
         }
         parts.push({ text: `Analyze business: ${body.businessName || body.url}. Return JSON report.` })
         
@@ -83,7 +116,7 @@ exports.handler = async (event) => {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${keys.openrouter}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: "google/gemini-flash-1.5", // OpenRouter often keeps aliases longer
+            model: "google/gemini-2.5-flash", // OpenRouter often keeps aliases longer
             messages: [{ role: "user", content: `Research business: ${body.businessName || body.url}. Return JSON.` }]
           })
         })

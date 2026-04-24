@@ -4,72 +4,41 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const SYSTEM_PROMPT = `You are VibeScout AI, an expert business vibe analyst and web designer's research assistant.
+const SYSTEM_PROMPT = `You are VibeScout AI, a professional Web Development Lead Generator.
+Your goal is to analyze a business and produce a high-fidelity JSON intelligence report focused on finding website improvement opportunities for cold calling.
 
-Your job: Analyze a business's complete digital presence and produce a comprehensive VIBE REPORT that helps a web designer understand the business's aesthetic, personality, and brand so they can build a perfect website.
+FORMATTING RULES (STRICT):
+1. NO PARAGRAPHS. Use multi-level bullet points for all description fields.
+2. Every field starting with a bullet (•) must contain 2-4 key insights.
+3. Find their social media presence if possible.
+4. Output ONLY valid JSON. Escape all newlines as \\n and use double quotes.
 
-Research and analyze everything you can about:
-- Google Maps profile (reviews, rating, photos described, location)
-- Instagram presence and aesthetic style
-- Facebook page activity
-- Any website or online menu
-- Common customer keywords and sentiments
-
-Output ONLY valid JSON (no markdown, no preamble) with this structure:
+JSON SCHEMA:
 {
   "businessName": "string",
   "businessType": "cafe|gym|salon|restaurant|retail|other",
-  "location": "City, State/Country or null",
-  "phone": "string or null",
-  "website": "string or null",
-  "googleRating": number or null,
-  "totalReviews": number or null,
-  "vibeScore": number between 1-10,
-  "primaryVibe": "one of: Cozy & Warm | Industrial Chic | Minimalist Modern | Boho Eclectic | Luxury Premium | Rustic Artisan | Energetic Bold | Calm Wellness | Playful Fun | Dark & Moody",
-  "colorPalette": {
-    "primary": "#hexcode",
-    "secondary": "#hexcode",
-    "accent": "#hexcode",
-    "background": "#hexcode",
-    "text": "#hexcode"
+  "location": "string",
+  "googleRating": number,
+  "totalReviews": number,
+  "vibeScore": number (1-10),
+  "primaryVibe": "string",
+  "colorPalette": { "primary": "#hex", "secondary": "#hex", "accent": "#hex", "background": "#hex", "text": "#hex" },
+  "typography": { "headingStyle": "string", "moodWords": ["word1", "word2"] },
+  "vibeSummary": "• Point 1\n• Point 2",
+  "socialHandles": {
+    "instagram": "@handle or Not Found",
+    "facebook": "url or Not Found",
+    "website": "url or Not Found"
   },
-  "typography": {
-    "headingStyle": "serif|sans-serif|display|handwritten",
-    "bodyStyle": "clean|editorial|minimal",
-    "moodWords": ["word1","word2","word3"]
+  "coldCallAmmunition": {
+    "strengths": "• What they do well currently\n• Point 2",
+    "weaknesses": "• Missing website features\n• Poor mobile design\n• Outdated info",
+    "pitchAngle": "• How to pitch a new website to them\n• Value proposition"
   },
-  "brandPersonality": {
-    "adjectives": ["adj1","adj2","adj3","adj4","adj5"],
-    "targetAudience": "string",
-    "pricePoint": "budget|mid-range|premium|luxury",
-    "ambiance": "3-5 punchy bullet points describing the physical and digital ambiance"
-  },
-  "digitalPresence": {
-    "googleMaps": {
-      "hasProfile": true,
-      "reviewHighlights": ["bullet point 1","bullet point 2","bullet point 3"],
-      "commonKeywords": ["kw1","kw2","kw3"]
-    },
-    "instagram": {
-      "likelyActive": true,
-      "estimatedStyle": "2-3 bullet points describing their aesthetic",
-      "contentThemes": ["theme1","theme2","theme3"]
-    },
-    "facebook": {
-      "likelyActive": true,
-      "contentStyle": "1-2 bullet points on their presence"
-    }
-  },
-  "websiteRecommendations": {
-    "layout": "2-3 bullet points on ideal layout approach",
-    "mustHaveFeatures": ["feature1","feature2","feature3","feature4"],
-    "avoidFeatures": ["avoid1","avoid2"],
-    "heroSection": "2-3 bullet points on ideal hero section",
-    "keyPages": ["Home","About","Menu/Services","Contact","Gallery"],
-    "callToAction": "primary CTA text"
-  },
-  "inspirationKeywords": ["kw1","kw2","kw3","kw4","kw5"],
-  "summary": "4-6 punchy bullet points providing an executive summary for the web designer"
+  "websiteDevelopmentSuggestions": {
+    "designDirection": "• Modern layout ideas\n• Vibe to capture",
+    "featuresToAdd": "• Online booking\n• Menu integration"
+  }
 }`
 
 // Helper: robust JSON extraction
@@ -104,7 +73,7 @@ const callGemini = async (input) => {
     const parts = []
     if (screenshotBase64) {
       parts.push({
-        inlineData: { mimeType: 'image/jpeg', data: screenshotBase64 }
+        inlineData: { mimeType: input.mimeType || 'image/png', data: screenshotBase64 }
       })
     }
 
@@ -139,7 +108,7 @@ const callGroq = async (input) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: `Analyze this business: ${businessName || url}. (Note: Screenshot data not available for this fallback).` }
@@ -172,7 +141,7 @@ const callOpenRouter = async (input) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'mistralai/mistral-7b-instruct:free',
+        model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: `Analyze business: ${businessName || url}` }
