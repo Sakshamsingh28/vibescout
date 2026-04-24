@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { Zap, Mail, Lock, User, Eye, EyeOff, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react"
 import { motion, AnimatePresence } from 'framer-motion'
+import InfiniteGrid from '../components/ui/infinite-grid-integration.tsx'
 
 export default function AuthPage() {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth()
@@ -32,9 +33,13 @@ export default function AuthPage() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', display:'flex', background:'#020617' }}>
+    <div style={{ minHeight:'100vh', display:'flex', background:'#020617', position: 'relative', overflow: 'hidden' }}>
+      {/* Background Layer */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', opacity: 0.3 }}>
+        <InfiniteGrid />
+      </div>
       {/* Left Side: Form */}
-      <div style={{ flex: 1.2, display:'flex', alignItems:'center', justifyContent:'center', padding: '40px' }}>
+      <div style={{ flex: 1.2, display:'flex', alignItems:'center', justifyContent:'center', padding: '40px', position: 'relative', zIndex: 1 }}>
         <motion.div 
           initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
           style={{ width:'100%', maxWidth: 400 }}>
@@ -136,7 +141,7 @@ export default function AuthPage() {
       </div>
 
       {/* Right Side: Visual */}
-      <div style={{ flex: 1, background: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #c084fc 100%)', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+      <div style={{ flex: 1, background: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #c084fc 100%)', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', zIndex: 1 }}>
         <div style={{ position:'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'radial-gradient(circle at 70% 30%, rgba(255,255,255,0.1) 0%, transparent 50%)' }} />
         
         {/* Navigation Arrows (Visual only) */}

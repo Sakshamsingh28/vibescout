@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { LayoutDashboard, Search, BookUser, LogOut, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import InfiniteGrid from './ui/infinite-grid-integration.tsx'
 
 export default function Layout() {
   const { user, logout } = useAuth()
@@ -20,7 +21,12 @@ export default function Layout() {
   ]
 
   return (
-    <div className="app-layout" style={{ minHeight:'100vh', background:'var(--bg)', color:'var(--text)', display:'flex', flexDirection:'column' }}>
+    <div className="app-layout" style={{ minHeight:'100vh', background:'var(--bg)', color:'var(--text)', display:'flex', flexDirection:'column', position: 'relative' }}>
+      
+      {/* Background Layer */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', opacity: 0.4 }}>
+        <InfiniteGrid />
+      </div>
       
       {/* Top Header */}
       <header style={{ 
@@ -55,14 +61,14 @@ export default function Layout() {
       </header>
 
       {/* Main Content Area */}
-      <main style={{ flex: 1, paddingTop: 72, paddingBottom: 100 }}>
+      <main style={{ flex: 1, paddingTop: 72, paddingBottom: 100, position: 'relative', zIndex: 1 }}>
         <Outlet />
       </main>
 
       {/* Bottom Floating Navigation (Image 2 style) */}
       <div style={{ 
         position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', 
-        zIndex: 1000, pointerEvents: 'none'
+        zIndex: 1001, pointerEvents: 'none'
       }}>
         <motion.nav 
           initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
