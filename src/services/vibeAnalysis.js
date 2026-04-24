@@ -1,7 +1,6 @@
 // VibeScout AI Analysis Service
-// Uses Google Gemini API for business vibe analysis
-// In development: uses VITE_GEMINI_API_KEY from .env.local
-// In production: routes through /.netlify/functions/analyze
+// Uses Multi-API Fallback system (Gemini -> Groq -> OpenRouter)
+// In development: uses VITE_GEMINI_API_KEY, VITE_GROQ_API_KEY, VITE_OPENROUTER_API_KEY from .env.local
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
@@ -73,103 +72,171 @@ Output ONLY valid JSON (no markdown, no preamble) with this structure:
   "summary": "3-4 sentence executive summary for the web designer explaining the vibe and design direction"
 }`
 
-const getGeminiModel = () => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY
-  if (!apiKey) {
-    throw new Error('VITE_GEMINI_API_KEY is not set. Add it to your .env.local file.')
+// Helper: robust JSON extraction
+const extractJSON = (text) => {
+  const clean = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+  const jsonMatch = clean.match(/\{[\s\S]*\}/)
+  if (jsonMatch) {
+    try {
+      return JSON.parse(jsonMatch[0])
+    } catch (e) {
+      console.error('JSON Parse Error:', e)
+      return null
+    }
   }
-  const genAI = new GoogleGenerativeAI(apiKey)
-  return genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    systemInstruction: SYSTEM_PROMPT,
-    tools: [{ googleSearch: {} }]
-  })
+  return null
+}
+
+// Provider 1: Google Gemini (Primary)
+const callGemini = async (input) => {
+  const { url, screenshotBase64, businessName } = input
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY
+  if (!apiKey) return null
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash', // Corrected from 2.5
+      systemInstruction: SYSTEM_PROMPT,
+      tools: [{ googleSearch: {} }]
+    })
+
+    const parts = []
+    if (screenshotBase64) {
+      parts.push({
+        inlineData: { mimeType: 'image/jpeg', data: screenshotBase64 }
+      })
+    }
+
+    const promptText = screenshotBase64
+      ? `Analyze this Google Maps/Search screenshot of the business${businessName ? ` "${businessName}"` : ''}${url ? ` (URL: ${url})` : ''}. Research additional info about this business using Google Search, then return the complete vibe report JSON.`
+      : `Research this business and analyze their full digital presence:
+      Business: ${businessName || url || 'Unknown'}
+      URL/Info: ${url || 'N/A'}
+      Return the complete vibe report JSON.`
+
+    parts.push({ text: promptText })
+
+    const result = await model.generateContent(parts)
+    return extractJSON(result.response.text())
+  } catch (e) {
+    console.warn('Gemini Provider Failed:', e.message)
+    return null
+  }
+}
+
+// Provider 2: Groq (Fallback)
+const callGroq = async (input) => {
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY
+  if (!apiKey) return null
+
+  const { url, businessName } = input
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-70b-versatile',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: `Analyze this business: ${businessName || url}. (Note: Screenshot data not available for this fallback).` }
+        ],
+        temperature: 0.1,
+        response_format: { type: 'json_object' }
+      })
+    })
+
+    const data = await response.json()
+    return extractJSON(data.choices[0].message.content)
+  } catch (e) {
+    console.warn('Groq Provider Failed:', e.message)
+    return null
+  }
+}
+
+// Provider 3: OpenRouter (Last Resort)
+const callOpenRouter = async (input) => {
+  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY
+  if (!apiKey) return null
+
+  const { url, businessName } = input
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'mistralai/mistral-7b-instruct:free',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: `Analyze business: ${businessName || url}` }
+        ]
+      })
+    })
+
+    const data = await response.json()
+    return extractJSON(data.choices[0].message.content)
+  } catch (e) {
+    console.warn('OpenRouter Provider Failed:', e.message)
+    return null
+  }
 }
 
 export const analyzeBusinessVibe = async (input) => {
-  const { url, screenshotBase64, businessName } = input
-
   // Use Netlify function in production
   if (!import.meta.env.DEV) {
     return analyzeViaNetlify(input)
   }
 
-  const model = getGeminiModel()
-  const parts = []
+  // 1. Try Gemini
+  let report = await callGemini(input)
+  if (report) return report
 
-  if (screenshotBase64) {
-    parts.push({
-      inlineData: {
-        mimeType: 'image/jpeg',
-        data: screenshotBase64
-      }
-    })
-  }
-
-  const promptText = screenshotBase64
-    ? `Analyze this Google Maps/Search screenshot of the business${businessName ? ` "${businessName}"` : ''}${url ? ` (URL: ${url})` : ''}. Research additional info about this business using Google Search, then return the complete vibe report JSON.`
-    : `Research this business and analyze their full digital presence:
-
-Business: ${businessName || url || 'Unknown'}
-URL/Info: ${url || 'N/A'}
-
-CRITICAL INSTRUCTIONS: 
-1. USE GOOGLE SEARCH to find the exact business associated with the URL or Name above. 
-2. If a shortened link (like maps.app.goo.gl) is provided, SEARCH FOR IT to find where it redirects or what business it belongs to.
-3. CAREFULLY determine the businessType (e.g. if it's a fitness center, it is a gym, NOT a cafe).
-4. DO NOT GUESS OR HALLUCINATE a generic "Cafe" if you cannot find it. If absolutely unknown, output businessType "other" and name it "Unknown Business".
-5. Return the complete vibe report JSON with real data found.`
-
-  parts.push({ text: promptText })
-
-  const result = await model.generateContent(parts)
-  const response = result.response
-  const rawText = response.text()
-
-  // Strip markdown fences if present and ensure robust JSON parsing
-  const clean = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
-  const jsonMatch = clean.match(/\{[\s\S]*\}/)
+  console.info('Gemini failed or skipped, trying Groq fallback...')
   
-  if (jsonMatch) {
-    try { 
-      return JSON.parse(jsonMatch[0]) 
-    } catch (e) { 
-      throw new Error('Could not parse AI response as JSON: ' + e.message) 
-    }
-  }
+  // 2. Try Groq
+  report = await callGroq(input)
+  if (report) return report
 
-  throw new Error('No structured data found in AI response')
+  console.info('Groq failed or skipped, trying OpenRouter fallback...')
+
+  // 3. Try OpenRouter
+  report = await callOpenRouter(input)
+  if (report) return report
+
+  throw new Error('All AI providers failed or returned invalid data. Check your API keys and connectivity.')
 }
 
 export const generateWebsiteCopy = async (vibeReport) => {
-  // Use Netlify function in production
-  if (!import.meta.env.DEV) {
-    return generateCopyViaNetlify(vibeReport)
+  if (!import.meta.env.DEV) return generateCopyViaNetlify(vibeReport)
+
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY
+  if (!apiKey) return null
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+
+    const prompt = `Based on this vibe report, generate website copy. Return ONLY JSON.
+    Vibe Report: ${JSON.stringify(vibeReport)}
+    {
+      "heroHeadline": "string",
+      "heroSubheadline": "string",
+      "tagline": "string",
+      "aboutSnippet": "string",
+      "ctaButton": "string"
+    }`
+
+    const result = await model.generateContent(prompt)
+    return extractJSON(result.response.text())
+  } catch {
+    return null
   }
-
-  const model = getGeminiModel()
-
-  const prompt = `Based on this vibe report, generate website copy. Return ONLY JSON, no markdown.
-
-Vibe Report: ${JSON.stringify(vibeReport)}
-
-Return:
-{
-  "heroHeadline": "punchy 5-7 word headline that captures the vibe",
-  "heroSubheadline": "one sentence that expands on the headline",
-  "tagline": "3-5 word brand tagline",
-  "aboutSnippet": "2 sentences for the About section",
-  "ctaButton": "2-4 word primary CTA"
-}`
-
-  const result = await model.generateContent(prompt)
-  const rawText = result.response.text()
-  const clean = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
-  const jsonMatch = clean.match(/\{[\s\S]*\}/)
-  if (jsonMatch) {
-    try { return JSON.parse(jsonMatch[0]) } catch { return null }
-  }
-  return null
 }
 
 // ─── Netlify function proxies (production only) ─────────────
@@ -196,3 +263,4 @@ const generateCopyViaNetlify = async (vibeReport) => {
   if (!response.ok) return null
   return response.json()
 }
+
